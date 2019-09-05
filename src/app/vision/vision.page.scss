@@ -3,8 +3,10 @@ input[type='file'] {
 }
 
 #image {
-    width: 100%;
+    width: 94%;
     min-height: 30vh;
     border: 4px dotted rgb(255, 0, 149);
     padding: 1rem;
+    position: relative;
+    left: 3%;
 }
