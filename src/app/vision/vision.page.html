@@ -9,4 +9,17 @@
 
 <ion-content>
 
+  <ion-button
+  fill="clear"
+  color="primary"
+  (click)="getPicture()">get picture</ion-button>
+
+  <input 
+  type="file" 
+  *ngIf="usePicker" 
+  #filePicker 
+  (change)="onFileChosen($event)" />
+
+  <ion-img *ngIf="imageFile" [src]="imageFile"></ion-img>
+
 </ion-content>
