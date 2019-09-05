@@ -1,28 +1,33 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { Camera, CameraOptions } from '@ionic-native/camera/ngx'
-import { Platform } from '@ionic/angular';
-import { DomSanitizer } from '@angular/platform-browser';
+// import { Camera, CameraOptions } from '@ionic-native/camera/ngx'
+import { Platform, LoadingController } from '@ionic/angular';
+// import { DomSanitizer } from '@angular/platform-browser';
 
-function base64toBlob(base64Data, contentType) {
-  contentType = contentType || '';
-  const sliceSize = 1024;
-  const byteCharacters = window.atob(base64Data);
-  const bytesLength = byteCharacters.length;
-  const slicesCount = Math.ceil(bytesLength / sliceSize);
-  const byteArrays = new Array(slicesCount);
+import { AngularFireUploadTask, AngularFireStorage } from '@angular/fire/storage';
+import { AngularFirestore } from '@angular/fire/firestore';
+import { Observable } from 'rxjs';
+import { tap, filter } from 'rxjs/operators';
 
-  for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
-    const begin = sliceIndex * sliceSize;
-    const end = Math.min(begin + sliceSize, bytesLength);
+// function base64toBlob(base64Data, contentType) {
+//   contentType = contentType || '';
+//   const sliceSize = 1024;
+//   const byteCharacters = window.atob(base64Data);
+//   const bytesLength = byteCharacters.length;
+//   const slicesCount = Math.ceil(bytesLength / sliceSize);
+//   const byteArrays = new Array(slicesCount);
 
-    const bytes = new Array(end - begin);
-    for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
-      bytes[i] = byteCharacters[offset].charCodeAt(0);
-    }
-    byteArrays[sliceIndex] = new Uint8Array(bytes);
-  }
-  return new Blob(byteArrays, { type: contentType });
-}
+//   for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+//     const begin = sliceIndex * sliceSize;
+//     const end = Math.min(begin + sliceSize, bytesLength);
+
+//     const bytes = new Array(end - begin);
+//     for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+//       bytes[i] = byteCharacters[offset].charCodeAt(0);
+//     }
+//     byteArrays[sliceIndex] = new Uint8Array(bytes);
+//   }
+//   return new Blob(byteArrays, { type: contentType });
+// }
 
 @Component({
   selector: 'app-vision',
@@ -33,12 +38,24 @@ export class VisionPage implements OnInit {
   @ViewChild('filePicker', { static: false }) filePickerRef: ElementRef<HTMLInputElement>
 
   usePicker = false
-  imageFile: any
+  imageFile: string
+
+  task: AngularFireUploadTask
+  result$: Observable<any>
+  loading: Promise<any>
 
   constructor(
     // private camera: Camera,
-    private platform: Platform
-  ) { }
+    private platform: Platform,
+    private loadingCtrl: LoadingController,
+    private storage: AngularFireStorage,
+    private afs: AngularFirestore
+  ) { 
+    this.loading = this.loadingCtrl.create({
+      message: 'Running AI vision analysis...',
+      duration: 2000
+    })
+  }
 
   ngOnInit() {
     this.checkIfUsingPicker()
@@ -68,9 +85,31 @@ export class VisionPage implements OnInit {
     }
     const fr = new FileReader()
     fr.onload = () => {
-      this.imageFile = fr.result
+      this.imageFile = fr.result.toString()
+      // this.startUpload()
     }
     fr.readAsDataURL(pickedFile)
+  }
+
+  startUpload(file: string) {
+    file = file || this.imageFile
+    this.loading.then( loadingEl => { 
+      loadingEl.present() 
+      const docId = this.afs.createId()
+      const path = `${docId}.jpg`
+
+      // Make a reference for the Firestore Document location, done by Cloud Function
+      const photoRef = this.afs.collection('photos').doc(docId)
+
+      // Wait for the Firestore Document is written
+      this.result$ = photoRef.valueChanges().pipe(
+        filter(data => !!data),
+        tap(_ => loadingEl.dismiss())
+      )
+
+      // Save image in Firebase Storage
+      this.task = this.storage.ref(path).putString(file, 'data_url')
+    })
   }
 
 

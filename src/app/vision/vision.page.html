@@ -14,12 +14,19 @@
   color="primary"
   (click)="getPicture()">get picture</ion-button>
 
-  <input 
+  <input
   type="file" 
   *ngIf="usePicker" 
   #filePicker 
   (change)="onFileChosen($event)" />
 
-  <ion-img *ngIf="imageFile" [src]="imageFile"></ion-img>
+  <ion-img
+  [src]="imageFile"
+  id="image"></ion-img>
+
+  <ion-button
+  fill="clear"
+  color="primary"
+  (click)="startUpload()">Upload to Firebase</ion-button>
 
 </ion-content>
